@@ -18,7 +18,7 @@ class Minea(QMainWindow):
         self._input_controller.start()
 
     def _received_cmd(self, cmd:list[str]):
-
+        
         self._text_edit.append(f"Received cmd: {' '.join(cmd)}")
 
     def closeEvent(self, event):
