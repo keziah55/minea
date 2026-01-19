@@ -1,3 +1,4 @@
+import os
 from PySide6.QtWidgets import QMainWindow, QTextEdit, QVBoxLayout
 from .input_listener import InputController
 
@@ -5,6 +6,8 @@ class Minea(QMainWindow):
     
     def __init__(self):
         super().__init__()
+
+        print(f"MINEA running in process {os.getpid()}")
 
         self._text_edit = QTextEdit()
         self._text_edit.setReadOnly(True)
