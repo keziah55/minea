@@ -87,10 +87,10 @@ class InputController(QObject):
 
     _request_listener_stop = Signal()
 
-    def __init__(self):
+    def __init__(self, tcp_host: str, tcp_port: int):
         super().__init__()
 
-        self._socket_info = SocketInfo(host="127.0.0.1", port=64632)
+        self._socket_info = SocketInfo(host=tcp_host, port=tcp_port)
 
         self._thread = QThread()
         self._listener = InputListener(self._socket_info)

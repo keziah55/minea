@@ -23,17 +23,15 @@ class ConfigManager:
             raise FileNotFoundError(f"No such file config file {config_file}")
         self._config_file = config_file
 
-        self._config_data = None
+        self._config_data = self._get_config()
 
     def _get_config(self) -> dict:
         """Read config file."""
 
-        if self._config_data is None:
+        with open(self._config_file, "rb") as fileobj:
+            config_data = tomllib.load(fileobj)
 
-            with open(self._config_file, "rb") as fileobj:
-                self._config_data = tomllib.load(fileobj)
-
-        return self._config_data
+        return config_data
 
     def get_config_section(self, key: str) -> dict:
         """Get section from config."""

@@ -7,7 +7,7 @@ Run MINEA.
 import sys
 from pathlib import Path
 from PySide6.QtWidgets import QApplication
-from minea import Minea
+from minea import Minea, Services
 
 
 if __name__ == "__main__":
@@ -28,7 +28,8 @@ if __name__ == "__main__":
     if p.exists():
         app.setDesktopFileName(str(p))
 
-    window = Minea()
+    services = Services()
+    window = Minea(services=services)
     window.show()
 
     sys.exit(app.exec())
