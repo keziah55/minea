@@ -85,6 +85,8 @@ class InputController(QObject):
 
     received_input = Signal(str)
 
+    log_msg = Signal(str)
+
     _request_listener_stop = Signal()
 
     def __init__(self, tcp_host: str, tcp_port: int):
@@ -100,6 +102,7 @@ class InputController(QObject):
         self._thread.finished.connect(self._listener.deleteLater)
         self._thread.started.connect(self._listener.start)
         self._listener.received_input.connect(self._received_input)
+        self._listener.log_msg.connect(self.log_msg.emit)
 
         self._request_listener_stop.connect(self._listener.stop)
 
