@@ -1,49 +1,72 @@
+import socket
+from typing import NamedTuple
+
 from PySide6.QtCore import QObject, QThread, Signal, Slot
-import selectors
-import sys
+
+
+class SocketInfo(NamedTuple):
+    """Data required to use TCP/IP socket."""
+
+    host: str
+    port: int
 
 
 class InputListener(QObject):
     """
-    Object that listens to stdin and send input via `received_input` signal.
+    Object that listens to socket and send input via `received_input` signal.
 
-    Call `start()` to start listening to `stdin`. Call `stop()` directly to stop.
+    Call `start()` to start listening to socket. Call `stop()` directly to stop.
 
     Parameters
     ----------
-    loop_time
-        Number of milliseconds to block stdin and loop for. Default is 100ms.
+    socket_info
+        `SocketInfo` object with host and port to connect to for server.
     """
 
-    received_input = Signal(list)
+    received_input = Signal(str)
+    """Signal emitted with data received from socket."""
 
-    def __init__(self, loop_time: int = 100):
+    log_msg = Signal(str)
+    """Signal emitted with general info about the `InputListener`."""
+
+    def __init__(self, socket_info: SocketInfo):
         super().__init__()
 
         self._run = False
-        self._loop_time = loop_time / 1000
 
-        # use selector with stdin so it does not block indefinitely
-        # see `selector.select` below - it blocks for `timeout` ms
-        self._selector = selectors.DefaultSelector()
-        self._selector.register(sys.stdin, selectors.EVENT_READ)
+        self._tcp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self._tcp_socket.bind(socket_info)
+        self._tcp_socket.listen(1)
+        self.log_msg.emit(f"TCP socket created with {socket_info}")
 
     @Slot()
     def stop(self):
-        """Stop `stdin` loop."""
+        """Stop socket loop."""
+        self.log_msg.emit("Stopping InputListener")
         self._run = False
 
     def start(self):
-        """Start `stdin` reading in loop."""
+        """Start socket reading in loop."""
 
         self._run = True
 
         while self._run:
 
-            events = self._selector.select(timeout=self._loop_time)
-            for key, _ in events:
-                cmd = key.fileobj.readline()
-                self.received_input.emit([cmd])
+            connection, client = self._tcp_socket.accept()
+
+            self.log_msg.emit(f"Connected to client IP: {client}")
+
+            msg = ""
+
+            with connection:
+                while True:
+                    data = connection.recv(1024)
+                    msg += data.decode()
+                    if not data:
+                        self.received_input.emit(msg)
+                        break
+
+        self._tcp_socket.close()
 
 
 class InputController(QObject):
@@ -60,17 +83,17 @@ class InputController(QObject):
         Number of milliseconds to block stdin and loop for. Default is 100ms.
     """
 
-    received_input = Signal(list)
+    received_input = Signal(str)
 
     _request_listener_stop = Signal()
 
-    def __init__(self, loop_time_ms: int = 100):
+    def __init__(self):
         super().__init__()
 
-        self._loop_time_ms = loop_time_ms
+        self._socket_info = SocketInfo(host="127.0.0.1", port=64632)
 
         self._thread = QThread()
-        self._listener = InputListener(loop_time=self._loop_time_ms)
+        self._listener = InputListener(self._socket_info)
 
         self._listener.moveToThread(self._thread)
 
@@ -87,10 +110,13 @@ class InputController(QObject):
     def stop(self):
         """Stop listening to stdin and quite thread."""
         self._listener.stop()
-        self._thread.exit()
-        self._thread.wait(self._loop_time_ms * 1.5)
+        tcp_socket = socket.create_connection(self._socket_info)
+        tcp_socket.sendall(b"")
+        tcp_socket.close()
 
-    @Slot(list)
-    def _received_input(self, cmd: list[str]):
+        self._thread.quit()
+
+    @Slot(str)
+    def _received_input(self, cmd: str):
         """Send `received_input` signal."""
         self.received_input.emit(cmd)
