@@ -2,6 +2,8 @@ import tomllib
 from pathlib import Path
 from typing import Optional
 
+from .custom_types import TcpConfig, CommandConfig
+
 
 class ConfigManager:
     """
@@ -42,3 +44,16 @@ class ConfigManager:
             raise KeyError(f"Unknown config key '{key}'")
 
         return data
+
+    def get_tcp_config(self) -> TcpConfig:
+        """Return `TcpConfig` object."""
+
+        tcp_config_dct = self.get_config_section("tcp")
+        return TcpConfig(**tcp_config_dct)
+
+    def get_command_config(self) -> CommandConfig:
+        """Return `CommandConfig` object."""
+
+        cmd_config = self.get_config_section("cmd")
+
+        return CommandConfig(**cmd_config)

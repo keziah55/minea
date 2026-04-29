@@ -1,43 +1,36 @@
 import socket
-from typing import NamedTuple
-
 from PySide6.QtCore import QObject, QThread, Signal, Slot
 
-
-class SocketInfo(NamedTuple):
-    """Data required to use TCP/IP socket."""
-
-    host: str
-    port: int
-
+from .utils import TcpConfig, CommandConfig
+from .services import Services
 
 class InputListener(QObject):
     """
     Object that listens to socket and send input via `received_input` signal.
 
-    Call `start()` to start listening to socket. Call `stop()` directly to stop.
-
     Parameters
     ----------
-    socket_info
-        `SocketInfo` object with host and port to connect to for server.
+    tcp_config
+        `TcpConfig` object with host and port to connect to for server.
     """
 
-    received_input = Signal(str)
-    """Signal emitted with data received from socket."""
+    received_input = Signal(list)
+    """Signal emitted with command and args received from socket."""
 
     log_msg = Signal(str)
     """Signal emitted with general info about the `InputListener`."""
 
-    def __init__(self, socket_info: SocketInfo):
+    def __init__(self, tcp_config: TcpConfig, cmd_config: CommandConfig):
         super().__init__()
 
         self._run = False
 
+        self._cmd_config = cmd_config
+
         self._tcp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self._tcp_socket.bind(socket_info)
+        self._tcp_socket.bind(tcp_config)
         self._tcp_socket.listen(1)
-        self.log_msg.emit(f"TCP socket created with {socket_info}")
+        self.log_msg.emit(f"TCP socket created with {tcp_config}")
 
     @Slot()
     def stop(self):
@@ -63,7 +56,8 @@ class InputListener(QObject):
                     data = connection.recv(1024)
                     msg += data.decode()
                     if not data:
-                        self.received_input.emit(msg)
+                        cmd = msg.split(self._cmd_config.sep)
+                        self.received_input.emit(cmd)
                         break
 
         self._tcp_socket.close()
@@ -83,20 +77,19 @@ class InputController(QObject):
         Number of milliseconds to block stdin and loop for. Default is 100ms.
     """
 
-    received_input = Signal(str)
+    received_input = Signal(list)
 
     log_msg = Signal(str)
 
     _request_listener_stop = Signal()
 
-    def __init__(self, tcp_host: str, tcp_port: int):
+    def __init__(self, services: Services):
         super().__init__()
 
-        self._socket_info = SocketInfo(host=tcp_host, port=tcp_port)
+        self._tcp_config = services.tcp_config
+        self._listener = InputListener(tcp_config=self._tcp_config, cmd_config=services.cmd_config)
 
         self._thread = QThread()
-        self._listener = InputListener(self._socket_info)
-
         self._listener.moveToThread(self._thread)
 
         self._thread.finished.connect(self._listener.deleteLater)
@@ -113,13 +106,14 @@ class InputController(QObject):
     def stop(self):
         """Stop listening to stdin and quite thread."""
         self._listener.stop()
-        tcp_socket = socket.create_connection(self._socket_info)
+        # self._request_listener_stop.emit()
+        tcp_socket = socket.create_connection(self._tcp_config)
         tcp_socket.sendall(b"")
         tcp_socket.close()
 
         self._thread.quit()
 
     @Slot(str)
-    def _received_input(self, cmd: str):
+    def _received_input(self, cmd: list[str]):
         """Send `received_input` signal."""
         self.received_input.emit(cmd)

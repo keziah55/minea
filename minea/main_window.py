@@ -21,8 +21,7 @@ class Minea(QMainWindow):
         self._log_pane = QTextEdit()
         self._log_pane.setReadOnly(True)
 
-        tcp_config = self._services.config_manager.get_config_section("tcp")
-        self._input_controller = InputController(tcp_config["host"], tcp_config["port"])
+        self._input_controller = InputController(services=services)
         self._input_controller.received_input.connect(self._received_cmd)
         self._input_controller.log_msg.connect(self._received_log_msg)
 
@@ -34,8 +33,9 @@ class Minea(QMainWindow):
 
         self._input_controller.start()
 
-    def _received_cmd(self, cmd: str):
-        self._text_edit.append(f"Received cmd: {cmd}")
+    def _received_cmd(self, cmd: list[str]):
+        cmd, *args = cmd
+        self._text_edit.append(f"Received cmd: {cmd} with args: {args}")
 
     def _received_log_msg(self, msg: str):
         self._log_pane.append(msg)
