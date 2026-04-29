@@ -1,7 +1,7 @@
 import os
-from PySide6.QtWidgets import QMainWindow, QTextEdit, QVBoxLayout, QSplitter
+from PySide6.QtWidgets import QMainWindow, QTextEdit, QSplitter
 from PySide6.QtCore import Qt
-from .services import Services
+from ..services import Services
 from .input_listener import InputController
 
 

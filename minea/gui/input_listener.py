@@ -1,8 +1,9 @@
 import socket
 from PySide6.QtCore import QObject, QThread, Signal, Slot
 
-from .utils import TcpConfig, CommandConfig
-from .services import Services
+from ..utils import TcpConfig, CommandConfig
+from ..services import Services
+
 
 class InputListener(QObject):
     """
