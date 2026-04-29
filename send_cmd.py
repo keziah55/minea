@@ -8,8 +8,8 @@ import argparse
 from minea.utils import TcpConfig, CommandConfig, ConfigManager
 
 _config_manager: ConfigManager = ConfigManager()
-TCP_CONFIG = _config_manager.get_tcp_config()
-CMD_CONFIG = _config_manager.get_command_config()
+TCP_CONFIG: TcpConfig = _config_manager.get_tcp_config()
+CMD_CONFIG: CommandConfig = _config_manager.get_command_config()
 
 _cmds = ["echo"]
 
@@ -60,5 +60,4 @@ if __name__ == "__main__":
     import sys
 
     args = _parse_cl_args(sys.argv[1:])
-
     send_cmd_tcp(args.cmd, *args.cmd_args)
